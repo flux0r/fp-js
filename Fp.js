@@ -25,7 +25,7 @@
                 o.constructor.apply(o, arguments);
                 return o;
             }
-            return c.apply(this, arguments);
+            return proto.apply(this, arguments);
         };
     };
 
@@ -38,12 +38,8 @@
                 throw new TypeError(name + ": Expected " + fields.length +
                         " fields. Got " + arguments.length + ".");
             }
-            if (fields.length === 0) {
-                self[name + "-void"] = true;
-            } else {
-                for (i = 0; i < fields.length; i += 1) {
-                    self[fields[i]] = arguments[i]
-                }
+            for (i = 0; i < fields.length; i += 1) {
+                self[fields[i]] = arguments[i];
             }
             return self;
         };
