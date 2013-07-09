@@ -5,7 +5,6 @@
 
         List,
 
-        delay,
         id,
         mk,
         mkConstructor,
@@ -14,12 +13,6 @@
 
     id = function (x) {
         return x;
-    };
-
-    delay = function (x) {
-        return function () {
-            return x;
-        };
     };
 
     mk = Object.create;
@@ -40,16 +33,17 @@
         var constructor, i, v;
         constructor = function () {
             var self, x;
-            if (fields === null) {
-                return {};
-            }
             self = mkConstructor(constructor);
             if (arguments.length !== fields.length) {
                 throw new TypeError(name + ": Expected " + fields.length +
                         " fields. Got " + arguments.length + ".");
             }
-            for (i = 0; i < fields.length; i += 1) {
-                self[fields[i]] = delay(arguments[i])
+            if (fields.length === 0) {
+                self[name + "-void"] = true;
+            } else {
+                for (i = 0; i < fields.length; i += 1) {
+                    self[fields[i]] = arguments[i]
+                }
             }
             return self;
         };
@@ -87,14 +81,13 @@
         for (c in cs) {
             if (cs.hasOwnProperty(c)) {
                 if (!cs[c].length) {
-                    defs[c] = product(c, null);
+                    defs[c] = mkPrototype(c);
                 } else {
                     defs[c] = product(c, cs[c]);
+                    defs[c].prototype = mkPrototype(c);
                 }
-                defs[c].prototype = mkP(c);
             }
         }
-
         return defs;
     };
 
@@ -103,7 +96,7 @@
         Nil: []
     });
 
-    List.xs = List.Cons(4, List.Nil());
+    List.xs = List.Cons(4, List.Nil);
 
     Fp = {};
 
