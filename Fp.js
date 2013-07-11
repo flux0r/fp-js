@@ -1,102 +1,70 @@
 (function (UNIVERSE) {
     "use strict";
 
-    var Fp,
+    var
+        /* Module */
+        Fp,
 
+        /* Constructors */
         List,
+        Pair,
 
-        id,
+        /* Functions */
         mk,
-        mkConstructor,
         product,
         sum;
 
-    id = function (x) {
-        return x;
-    };
-
-    mk = Object.create;
-
-    mkConstructor = function (proto) {
-        return function () {
-            var o;
-            if (Object.getPrototypeOf(this) !== proto.prototype) {
-                o = Object.create(proto.prototype);
-                o.constructor.apply(o, arguments);
+    product = function (name, fields) {
+        var f;
+        f = function () {
+            var i, o;
+            if (!(this instanceof f)) {
+                o = Object.create(f.prototype);
+                f.apply(o, arguments);
                 return o;
             }
-            return proto.apply(this, arguments);
-        };
-    };
-
-    product = function (name, fields) {
-        var constructor, i, v;
-        constructor = function () {
-            var self, x;
-            self = mkConstructor(constructor);
             if (arguments.length !== fields.length) {
                 throw new TypeError(name + ": Expected " + fields.length +
                         " fields. Got " + arguments.length + ".");
             }
             for (i = 0; i < fields.length; i += 1) {
-                self[fields[i]] = arguments[i];
+                this[fields[i]] = arguments[i];
             }
-            return self;
+            this.tag = name;
         };
-        return constructor;
+        f.tag = name;
+        f.fields = fields.length;
+        return f;
     };
 
-    sum = function (cs) {
-        var c, defs, k, mkCatamorphism, mkPrototype;
-
-        defs = function () {};
-
-        mkCatamorphism = function (k) {
-            return function (fs) {
-                var args, fields, i;
-                fields = cs[k];
-                args = [];
-                if (!cs[k]) {
-                    throw new TypeError("Catamorphism: No such " +
-                            " constructor as " + k + ".");
-                }
-                for (i = 0; i < fields.length; i += 1) {
-                    args.push(this[fields[i]]);
-                }
-                return fs[k].apply(this, args);
-            };
-        };
-
-        mkPrototype = function (k) {
-            var proto;
-            proto = mk(defs.prototype);
-            proto.catamorphism = mkCatamorphism(k);
-            return proto;
-        };
-
-        for (c in cs) {
-            if (cs.hasOwnProperty(c)) {
-                if (!cs[c].length) {
-                    defs[c] = mkPrototype(c);
-                } else {
-                    defs[c] = product(c, cs[c]);
-                    defs[c].prototype = mkPrototype(c);
+    sum = function (name, cs) {
+        var f;
+        f = function () {
+            var c, o;
+            if (!(this instanceof f)) {
+                o = Object.create(f.prototype);
+                f.apply(o, arguments);
+                return o;
+            }
+            for (c in cs) {
+                if (cs.hasOwnProperty(c)) {
+                    this[c] = product(c, cs[c]);
+                    this[c].type = name;
                 }
             }
-        }
-        return defs;
+            this.type = name;
+            this.branches = Object.keys(cs).length;
+        };
+        return f();
     };
 
-    List = sum({
-        Cons: ["car", "cdr"],
-        Nil: []
-    });
+    Pair = product("Pair", ["car", "cdr"]);
+    List = sum("List", { Cons: ["head", "tail"], Nil: [] });
 
-    List.xs = List.Cons(4, List.Nil);
-
-    Fp = {};
+    Fp = Object.create(null);
 
     Fp.List = List;
+    Fp.Pair = Pair;
 
     Fp.mk = mk;
     Fp.product = product;
