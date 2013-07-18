@@ -1,17 +1,8 @@
 (function (UNIVERSE) {
     "use strict";
 
-    var
-        Fp,
-
-        extend,
-        isNotDefined,
-        mkData,
-        mkDataConstructor,
-        mkDataDeconstructor,
-        mkDataPredicate;
-
-    Fp = Object.create(null);
+    var Fp, extend, environment, isDefined, isNotDefined, mkAccessor, mkData,
+        mkDataConstructor, mkDataDeconstructor, mkDataPredicate;
 
     extend = function (x, y) {
         var prop;
@@ -21,6 +12,55 @@
             }
         }
         return x;
+    };
+
+    mkAccessor = function (k, d) {
+        return function (x) {
+            if (!d.pred(x)) {
+                throw new TypeError(k + ": Expected " + d.type +
+                    " but got something else.");
+            }
+            return d.unmaker(x, k);
+        };
+    };
+
+    environment = function (dataConstructors) {
+        var d, datas, i, o;
+
+        if (!(this instanceof environment) ||
+                isDefined(this.data)) {
+            o = Object.create(environment.prototype);
+            environment.apply(o, arguments);
+            return o;
+        }
+
+        datas = dataConstructors || {};
+
+        this.data = function (d) {
+            var c, newDatas;
+            c = {};
+            c[d.type] = d;
+            newDatas = extend(datas, c);
+            return environment(newDatas);
+        };
+
+        for (d in datas) {
+            if (datas.hasOwnProperty(d)) {
+                o = datas[d];
+                if (isDefined(this[o.type])) {
+                    throw new Error("The name for the data constructor " + d +
+                            " is already defined in this environment.");
+                }
+                this[o.type] = o.maker;
+                for (i = 0; i < o.meta.length; i += 1) {
+                    this[o.meta[i]] = mkAccessor(o.meta[i], o);
+                }
+            }
+        }
+    };
+
+    isDefined = function (x) {
+        return x !== undefined;
     };
 
     isNotDefined = function (x) {
@@ -37,8 +77,9 @@
                 return o;
             }
             if (arguments.length !== fields.length) {
-                throw new TypeError(dataName + ": Expected " + fields.length  +
-                        " fields but got " + arguments.length + ".");
+                throw new TypeError(dataName + ": Expected " +
+                        fields.length + " fields but got " +
+                        arguments.length + ".");
             }
             for (i = 0; i < fields.length; i += 1) {
                 this[fields[i]] = arguments[i];
@@ -72,6 +113,7 @@
 
     mkData = function (dataName, fields) {
         return {
+            type: dataName,
             meta: fields,
             maker: mkDataConstructor(dataName, fields),
             pred: mkDataPredicate(fields),
@@ -79,25 +121,8 @@
         };
     };
 
-
-/*Pair = mkRecordConstructor("Pair", ["car", "cdr"]);
-
-testPair1 = car(Pair(3, 4)) === 3;
-testPair2 = cdr(Pair(3, 4)) === 4;
-*/
-
-/*
-Maybe = mkTypeConstructor("Maybe", { Just: ["val"], Nothing: [] });
-
-fromMaybe = function (defval, x) {
-    x.match({ Just: x.val, Nothing: defval });
-};
-
-
-testMaybe1 = fromMaybe(0, Just(3)) === 3;
-testMaybe2 = fromMaybe(0, Nothing()) === 0;
-*/
-
+    Fp = Object.create(null);
+    Fp.environment = environment;
     Fp.extend = extend;
     Fp.mkData = mkData;
 
