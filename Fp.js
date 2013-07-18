@@ -1,8 +1,76 @@
 (function (UNIVERSE) {
     "use strict";
+/*--------------------------------------------------------------------------*/
 
-    var Fp, extend, environment, isDefined, isNotDefined, mkAccessor, mkData,
-        mkDataConstructor, mkDataDeconstructor, mkDataPredicate;
+
+
+/*--------------------------------------------------------------------------*/
+    var
+        Fp,
+
+        extend,
+        environment,
+        isDefined,
+        isNotDefined,
+        mkAccessor,
+        mkData,
+        mkDataConstructor,
+        mkDataDeconstructor,
+        mkDataPredicate,
+        undef;
+/*--------------------------------------------------------------------------*/
+
+
+
+/*----------------------------------------------------------------------------
+ * | Get the undefined primitive.
+ *
+ * > undef
+ * undefined
+ */
+
+    undef = void(0);
+
+
+/*----------------------------------------------------------------------------
+ * | Find out whether a value is defined.
+ *
+ * > var x = 53;
+ * > isDefined(53);
+ * true
+ */
+
+    isDefined = function (x) {
+        return x !== undef;
+    };
+
+
+/*----------------------------------------------------------------------------
+ * | Find out whether a value is not defined.
+ *
+ * var f = function () {
+ * ...     var x;
+ * ...     return x;
+ * ... };
+ * > var x = f();
+ * > isNotDefined(x);
+ * true
+ */
+
+    isNotDefined = function (x) {
+        return x === undef;
+    };
+
+
+/*----------------------------------------------------------------------------
+ * | Add the properties in y to x. Any properties in x that also exist in y
+ * will be overwritten with y's version.
+ *
+ * > var x = { one: 1, six: 6 };
+ * > var y = { eight: 8, six: 10 };
+ * > extend(x, y);
+ * { one: 1, six: 10, eight: 8 }
+ */
 
     extend = function (x, y) {
         var prop;
@@ -14,15 +82,27 @@
         return x;
     };
 
-    mkAccessor = function (k, d) {
-        return function (x) {
-            if (!d.pred(x)) {
-                throw new TypeError(k + ": Expected " + d.type +
-                    " but got something else.");
-            }
-            return d.unmaker(x, k);
-        };
-    };
+
+
+/*----------------------------------------------------------------------------
+ * | An environment has data constructors and accessors. Adding a data
+ * constructor to the environment using mkData embeds the constructor and
+ * creates accessor functions for the fields in the data type.
+ *
+ * // A simple product type.
+ * > var Pair = Fp.mkData("Pair", ["car", "cdr"]);
+ * // Make an environment and then add the type to it.
+ * > var e = Fp.environment().data(Pair);
+ * // Make a value of the type and then test the accessors.
+ * > var x = e.Pair(3, 2);
+ * > e.car(x);
+ * 3
+ * > var z = { car: 3, cdr: 2 };
+ * // Looks just like x so I should be able to...
+ * > e.car(z);
+ * TypeError: car: Expected Pair but got something else.
+ * // But it isn't a Pair.
+ */
 
     environment = function (dataConstructors) {
         var d, datas, i, o;
@@ -59,13 +139,26 @@
         }
     };
 
-    isDefined = function (x) {
-        return x !== undefined;
+
+/*----------------------------------------------------------------------------
+ * | Make an accessor function out of a field name and a data type from
+ * mkData.
+ */
+
+    mkAccessor = function (k, d) {
+        return function (x) {
+            if (!d.pred(x)) {
+                throw new TypeError(k + ": Expected " + d.type +
+                    " but got something else.");
+            }
+            return d.unmaker(x, k);
+        };
     };
 
-    isNotDefined = function (x) {
-        return x === undefined;
-    };
+
+/*----------------------------------------------------------------------------
+ * | Make a data constructor out of a name and a list of field names.
+ */
 
     mkDataConstructor = function (dataName, fields) {
         var maker;
@@ -89,10 +182,18 @@
         return maker;
     };
 
-    mkDataPredicate = function (fields) {
+
+/*----------------------------------------------------------------------------
+ * | Make a function to tell whether a value was made by a constructor.
+ */
+
+    mkDataPredicate = function (constructor, fields) {
         var p;
         p = function (x) {
             var i;
+            if (!(x instanceof constructor)) {
+                return false;
+            }
             for (i = 0; i < fields.length; i += 1) {
                 if (isNotDefined(x[fields[i]])) {
                     return false;
@@ -103,6 +204,12 @@
         return p;
     };
 
+
+/*----------------------------------------------------------------------------
+ * | Make a deconstructor. That is, make a function that when given a value
+ * and a field name gets the correct field out of the value.
+ */
+
     mkDataDeconstructor = function (fields) {
         var d;
         d = function (x, k) {
@@ -111,21 +218,43 @@
         return d;
     };
 
+
+/*----------------------------------------------------------------------------
+ * | From a name and a list of fields, make an object with meta data (field
+ * names), a constructor function, a predicate function, and a deconstructor
+ * function. Generally this result is passed in to an environment via its
+ * data function.
+ */
+
     mkData = function (dataName, fields) {
-        return {
-            type: dataName,
-            meta: fields,
-            maker: mkDataConstructor(dataName, fields),
-            pred: mkDataPredicate(fields),
-            unmaker: mkDataDeconstructor(fields)
-        };
+        var d;
+        d = {};
+        d.type = dataName;
+        d.meta = fields;
+        d.maker = mkDataConstructor(dataName, fields);
+        d.pred = mkDataPredicate(d.maker, fields);
+        d.unmaker = mkDataDeconstructor(fields);
+        return d;
     };
 
+
+
+/*----------------------------------------------------------------------------
+ * | EXPORTS
+ */
+
     Fp = Object.create(null);
+
     Fp.environment = environment;
     Fp.extend = extend;
+    Fp.isDefined = isDefined;
+    Fp.isNotDefined = isNotDefined;
     Fp.mkData = mkData;
+    Fp.undef = undef;
 
     UNIVERSE.Fp = Fp;
+/*--------------------------------------------------------------------------*/
+
+
 
 }(this));
