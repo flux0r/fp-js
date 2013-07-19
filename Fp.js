@@ -17,7 +17,10 @@
         mkDataConstructor,
         mkDataDeconstructor,
         mkDataPredicate,
-        undef;
+        mkType,
+        mkTypePredicate,
+        undef,
+        unit;
 /*--------------------------------------------------------------------------*/
 
 
@@ -161,7 +164,7 @@
  */
 
     mkDataConstructor = function (dataName, fields) {
-        var maker;
+        var i, maker;
         maker = function () {
             var i, o;
             if (!(this instanceof maker)) {
@@ -210,7 +213,7 @@
  * and a field name gets the correct field out of the value.
  */
 
-    mkDataDeconstructor = function (fields) {
+    mkDataDeconstructor = function () {
         var d;
         d = function (x, k) {
             return x[k];
@@ -238,6 +241,42 @@
     };
 
 
+/* Sum type predicate */
+
+    mkTypePredicate = function (ds) {
+        var p;
+        p = function (x) {
+            var constructor;
+            for (constructor in ds) {
+                if (ds.hasOwnProperty(constructor)) {
+                    if (ds[constructor].pred(x)) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        };
+        return p;
+    };
+
+/* Sum type. */
+
+    mkType = function (typeName, dataConstructors) {
+        var o, k, mkMatcher;
+        o = { constructors: {} };
+
+        for (k in dataConstructors) {
+            if (dataConstructors.hasOwnProperty(k)) {
+                o.constructors[k] = mkData(k, dataConstructors[k]);
+            }
+        }
+
+        o.pred = mkTypePredicate(o.constructors);
+
+        return o;
+    };
+
+
 
 /*----------------------------------------------------------------------------
  * | EXPORTS
@@ -250,6 +289,7 @@
     Fp.isDefined = isDefined;
     Fp.isNotDefined = isNotDefined;
     Fp.mkData = mkData;
+    Fp.mkType = mkType;
     Fp.undef = undef;
 
     UNIVERSE.Fp = Fp;
