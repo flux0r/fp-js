@@ -107,34 +107,44 @@
  * // But it isn't a Pair.
  */
 
-    environment = function (dataConstructors) {
-        var d, datas, i, o;
+    environment = function (datas, types) {
+        var d, ds, i, o, ts;
 
         if (!(this instanceof environment) ||
-                isDefined(this.data)) {
+                isDefined(this.type)) {
             o = Object.create(environment.prototype);
             environment.apply(o, arguments);
             return o;
         }
 
-        datas = dataConstructors || {};
+        ds = datas || {};
+        ts = types || {};
 
-        this.data = function (d) {
-            var c, newDatas;
-            c = {};
-            c[d.type] = d;
-            newDatas = extend(datas, c);
-            return environment(newDatas);
+        this.type = function (t) {
+            var c, xt, xd, newDs, newTs;
+            xt = {};
+            xt[t.type] = { pred: t.pred };
+            xt[t.type].tags = [];
+            xd = {};
+            for (c in t.constructors) {
+                if (t.constructors.hasOwnProperty(c)) {
+                    xt[t.type].tags.push(c);
+                    xd[c] = t.constructors[c];
+                }
+            }
+            newDs = extend(ds, xd);
+            newTs = extend(ts, xt);
+            return environment(newDs, newTs);
         };
 
         for (d in datas) {
             if (datas.hasOwnProperty(d)) {
                 o = datas[d];
-                if (isDefined(this[o.type])) {
+                if (isDefined(this[o.tag])) {
                     throw new Error("The name for the data constructor " + d +
                             " is already defined in this environment.");
                 }
-                this[o.type] = o.maker;
+                this[o.tag] = o.maker;
                 for (i = 0; i < o.meta.length; i += 1) {
                     this[o.meta[i]] = mkAccessor(o.meta[i], o);
                 }
@@ -151,7 +161,7 @@
     mkAccessor = function (k, d) {
         return function (x) {
             if (!d.pred(x)) {
-                throw new TypeError(k + ": Expected " + d.type +
+                throw new TypeError(k + ": Expected " + d.tag +
                     " but got something else.");
             }
             return d.unmaker(x, k);
@@ -232,7 +242,7 @@
     mkData = function (dataName, fields) {
         var d;
         d = {};
-        d.type = dataName;
+        d.tag = dataName;
         d.meta = fields;
         d.maker = mkDataConstructor(dataName, fields);
         d.pred = mkDataPredicate(d.maker, fields);
@@ -268,10 +278,12 @@
         for (k in dataConstructors) {
             if (dataConstructors.hasOwnProperty(k)) {
                 o.constructors[k] = mkData(k, dataConstructors[k]);
+                o.constructors[k].maker.type = typeName;
             }
         }
 
         o.pred = mkTypePredicate(o.constructors);
+        o.type = typeName;
 
         return o;
     };
