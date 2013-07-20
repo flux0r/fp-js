@@ -19,8 +19,7 @@
         mkDataPredicate,
         mkType,
         mkTypePredicate,
-        undef,
-        unit;
+        undef;
 /*--------------------------------------------------------------------------*/
 
 
@@ -174,7 +173,7 @@
  */
 
     mkDataConstructor = function (dataName, fields) {
-        var i, maker;
+        var maker;
         maker = function () {
             var i, o;
             if (!(this instanceof maker)) {
@@ -272,7 +271,7 @@
 /* Sum type. */
 
     mkType = function (typeName, dataConstructors) {
-        var o, k, mkMatcher;
+        var o, k;
         o = { constructors: {} };
 
         for (k in dataConstructors) {
