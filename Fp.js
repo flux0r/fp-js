@@ -119,6 +119,31 @@
         ds = datas || {};
         ts = types || {};
 
+//         this.match = function (x, o) {
+//             var constructors, k;
+//             constructors = [];
+//             for (k in ts) {
+//                 if (ts.hasOwnProperty(k)) {
+//                     if (k.pred(x)) {
+//                         constructors = k.tags;
+//                         break;
+//                     }
+//                 }
+//             }
+//             if (constructors === []) {
+//                 throw new Error("match: The parameter matches no types in " +
+//                         "this environment.");
+//             }
+
+
+        this.getDs = function () {
+            return ds;
+        };
+
+        this.getTs = function () {
+            return ts;
+        };
+
         this.type = function (t) {
             var c, xt, xd, newDs, newTs;
             xt = {};
@@ -268,6 +293,10 @@
         return p;
     };
 
+
+/* Sum type match function for pattern matching. */
+
+
 /* Sum type. */
 
     mkType = function (typeName, dataConstructors) {
@@ -288,6 +317,16 @@
     };
 
 
+/*
+
+fromMaybe = function (default, x) {
+    return e.match(x, {
+        Nothing: function () { return default; },
+        Just: function (v) { return v; }
+    });
+};
+
+*/
 
 /*----------------------------------------------------------------------------
  * | EXPORTS
