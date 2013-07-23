@@ -12,6 +12,8 @@
         environment,
         isDefined,
         isNotDefined,
+        matchDatas,
+        matchTypes,
         mkAccessor,
         mkData,
         mkDataConstructor,
@@ -84,26 +86,86 @@
         return x;
     };
 
+    matchTypes = function (x, types) {
+        var k;
+        for (k in types) {
+            if (types.hasOwnProperty(k)) {
+                if (types[k].pred(x)) {
+                    return types[k].tags;
+                }
+            }
+        }
+        throw new Error("match: The parameter matches no types " +
+            "in this environment.");
+    };
+
+    matchDatas = function (x, constructors, datas) {
+        var i;
+        for (i = 0; i < constructors.length; i += 1) {
+            if (datas[constructors[i]].pred(x)) {
+                return constructors[i];
+            }
+        }
+        throw new Error("match: The parameter matches no " +
+            " constructors in this environment.");
+    };
+
 
 
 /*----------------------------------------------------------------------------
- * | An environment has data constructors and accessors. Adding a data
- * constructor to the environment using mkData embeds the constructor and
- * creates accessor functions for the fields in the data type.
+ * | An environment has type constructors, data constructors, accessors, and
+ * a function for pattern matching.  Adding a type constructor that was
+ * created with mkType to the environment using the type method embeds the
+ * constructors for the type and creates accessor functions for the fields
+ * in the data constructors for the type.
  *
- * // A simple product type.
- * > var Pair = Fp.mkData("Pair", ["car", "cdr"]);
- * // Make an environment and then add the type to it.
- * > var e = Fp.environment().data(Pair);
- * // Make a value of the type and then test the accessors.
- * > var x = e.Pair(3, 2);
- * > e.car(x);
- * 3
- * > var z = { car: 3, cdr: 2 };
- * // Looks just like x so I should be able to...
- * > e.car(z);
- * TypeError: car: Expected Pair but got something else.
- * // But it isn't a Pair.
+ * To make a type, specify the type's name and an object containing all the
+ * type's data constructors. Each constructor should have an Array (can be
+ * empty) of field names.
+ *
+ *     > var Pair = mkType("Pair", { Pair: ["car", "cdr"] });
+ *     > var Maybe = mkType("Maybe", { Nothing: [], Just: ["val"] });
+ *
+ * Make an environment and then add the types to it.
+ * 
+ *     > var e = environment().type(Pair).type(Maybe);
+ *
+ * Make some values of the types using the data constructors and use
+ * the accessors to get them back out.
+ *
+ *     > var x = e.Pair(3, 2);
+ *     > e.car(x);
+ *     3
+ *     > e.cdr(x);
+ *     2
+ *     > var y = e.Just(12);
+ *     > var z = e.Nothing();
+ *     > e.val(y);
+ *     12
+ *     > e.val(z);
+ *     TypeError: val: Expected Just but got something else.
+ *
+ * Use pattern matching. (Only on constructors for now.)
+ *     
+ *     > var div = function (x, y) { return x/y; };
+ *     > div(24, 0);
+ *     Infinity
+ *     > var safeDiv = function (x, y) {
+ *     ... if (y === 0) {
+ *     ...     return Nothing();
+ *     ... }
+ *     ... return Just(div(x, y));
+ *     ... };
+ *     > safeDiv(24, 0);
+ *     {}
+ *
+ * Looks just like x so I should be able to use the accessors, right?
+ * 
+ *     > var z = { car: 3, cdr: 2 };
+ *     > e.car(z);
+ *     TypeError: car: Expected Pair but got something else.
+ *
+ * Nope: it isn't a Pair.
  */
 
     environment = function (datas, types) {
@@ -119,22 +181,17 @@
         ds = datas || {};
         ts = types || {};
 
-//         this.match = function (x, o) {
-//             var constructors, k;
-//             constructors = [];
-//             for (k in ts) {
-//                 if (ts.hasOwnProperty(k)) {
-//                     if (k.pred(x)) {
-//                         constructors = k.tags;
-//                         break;
-//                     }
-//                 }
-//             }
-//             if (constructors === []) {
-//                 throw new Error("match: The parameter matches no types in " +
-//                         "this environment.");
-//             }
-
+        this.match = function (x, o) {
+            var accessors, args, constructors, matchedConstructor, i;
+            args = [];
+            constructors = matchTypes(x, ts);
+            matchedConstructor = matchDatas(x, constructors, ds);
+            accessors = ds[matchedConstructor].meta;
+            for (i = 0; i < accessors.length; i += 1) {
+                args.push(this[accessors[i]](x));
+            }
+            return o[matchedConstructor].apply(this, args);
+        };
 
         this.getDs = function () {
             return ds;
