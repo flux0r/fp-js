@@ -86,6 +86,14 @@
         return x;
     };
 
+
+/*----------------------------------------------------------------------------
+ * | Get the names of the constructors for an object.
+ *
+ * Throw an error if x is not of a type registered in the environment from
+ * which matchTypes is called.
+ */
+
     matchTypes = function (x, types) {
         var k;
         for (k in types) {
@@ -98,6 +106,13 @@
         throw new Error("match: The parameter matches no types " +
             "in this environment.");
     };
+
+
+/*----------------------------------------------------------------------------
+ * | Get the name of the constructor that created an object.
+ *
+ * If x wasn't made by any of the constructors, throw an error.
+ */
 
     matchDatas = function (x, constructors, datas) {
         var i;
@@ -150,22 +165,19 @@
  *     > var div = function (x, y) { return x/y; };
  *     > div(24, 0);
  *     Infinity
- *     > var safeDiv = function (x, y) {
- *     ... if (y === 0) {
- *     ...     return Nothing();
- *     ... }
- *     ... return Just(div(x, y));
+ *     > var fromMaybe = function (defaultValue, x) {
+ *     ...     return e.match(x, {
+ *     ...         Nothing: function () { return defaultValue; },
+ *     ...         Just: function (x) { return x; }
+ *     ...     });
  *     ... };
- *     > safeDiv(24, 0);
- *     {}
- *
- * Looks just like x so I should be able to use the accessors, right?
- * 
- *     > var z = { car: 3, cdr: 2 };
- *     > e.car(z);
- *     TypeError: car: Expected Pair but got something else.
- *
- * Nope: it isn't a Pair.
+ *     > var safeDiv = function (x, y) {
+ *     ...     return y === 0 ? e.Nothing() : e.Just(div(x, y));
+ *     ... };
+ *     > fromMaybe(0, safeDiv(24, 0))
+ *     0
+ *     > fromMaybe(0, safeDiv(24, 2))
+ *     12
  */
 
     environment = function (datas, types) {
@@ -316,8 +328,8 @@
 /*----------------------------------------------------------------------------
  * | From a name and a list of fields, make an object with meta data (field
  * names), a constructor function, a predicate function, and a deconstructor
- * function. Generally this result is passed in to an environment via its
- * data function.
+ * function. mkData is not exported should generally only be called by
+ * mkType when created new sum type constructors.
  */
 
     mkData = function (dataName, fields) {
@@ -332,7 +344,9 @@
     };
 
 
-/* Sum type predicate */
+/*----------------------------------------------------------------------------
+ * | Make a function to tell whether an object is of a given type.
+ */
 
     mkTypePredicate = function (ds) {
         var p;
@@ -351,10 +365,29 @@
     };
 
 
-/* Sum type match function for pattern matching. */
-
-
-/* Sum type. */
+/*----------------------------------------------------------------------------
+ * | Make a sum type out of a name and an object with data constructor names
+ * as keys and an Array of strings naming the fields for each constructor,
+ * which can be the empty Array.
+ *
+ *     > var List = mkType("List", {Nil: [], Cons: ["head", "tail"]});
+ *     > List
+ *     { constructors:
+ *         { Nil:
+ *             { tag: "Nil",
+ *               meta: [],
+ *               maker: [Object],
+ *               pred: [Function],
+ *               unmaker: [Function] },
+ *           Cons:
+ *             { tag: "Cons",
+ *               meta: [Object],
+ *               maker: [Object],
+ *               pred: [Function],
+ *               unmaker: [Function] } },
+ *       pred: [Function],
+ *       type: "List" }
+ */
 
     mkType = function (typeName, dataConstructors) {
         var o, k;
@@ -373,17 +406,6 @@
         return o;
     };
 
-
-/*
-
-fromMaybe = function (default, x) {
-    return e.match(x, {
-        Nothing: function () { return default; },
-        Just: function (v) { return v; }
-    });
-};
-
-*/
 
 /*----------------------------------------------------------------------------
  * | EXPORTS
