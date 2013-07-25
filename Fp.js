@@ -8,10 +8,28 @@
     var
         Fp,
 
-        extend,
+        List,
+
+        add,
+        compose,
+        curry,
+        dec,
+        div,
         environment,
+        extend,
+        flip,
+        head,
+        inc,
         isDefined,
         isNotDefined,
+        mkType,
+        mul,
+        partial1,
+        sub,
+        tail,
+        uncurry,
+        undef,
+
         matchDatas,
         matchTypes,
         mkAccessor,
@@ -19,9 +37,7 @@
         mkDataConstructor,
         mkDataDeconstructor,
         mkDataPredicate,
-        mkType,
-        mkTypePredicate,
-        undef;
+        mkTypePredicate;
 /*--------------------------------------------------------------------------*/
 
 
@@ -230,9 +246,9 @@
             return environment(newDs, newTs);
         };
 
-        for (d in datas) {
-            if (datas.hasOwnProperty(d)) {
-                o = datas[d];
+        for (d in ds) {
+            if (ds.hasOwnProperty(d)) {
+                o = ds[d];
                 if (isDefined(this[o.tag])) {
                     throw new Error("The name for the data constructor " + d +
                             " is already defined in this environment.");
@@ -408,17 +424,95 @@
 
 
 /*----------------------------------------------------------------------------
+ * | Flip the arguments of a binary function.
+ */
+
+    flip = function (f) {
+        return function (x, y) {
+            return f(y, x);
+        };
+    };
+
+
+/*----------------------------------------------------------------------------
+ * | Make arithmentic operators functions.
+ */
+
+    add = function (x, y) { return x + y; };
+    sub = function (x, y) { return x - y; };
+    mul = function (x, y) { return x * y; };
+    div = function (x, y) { return x / y; };
+
+
+/*----------------------------------------------------------------------------
+ * | Partially apply a binary function.
+ */
+
+    partial1 = function (x, f) {
+        return function (y) {
+            return f(x, y);
+        };
+    };
+
+
+/*----------------------------------------------------------------------------
+ * | Make a function of two arguments into a function of one argument that
+ * returns a function of one argument. Also make a way to undo curry.
+ */
+
+    curry = function (f) {
+        return function (x) {
+            return partial1(x, f);
+        };
+    };
+
+    uncurry = function (f) {
+        return function (x, y) {
+            return f(x)(y);
+        };
+    };
+
+
+/*----------------------------------------------------------------------------
+ * | Integer increment and decrement.
+ */
+
+    inc = partial1(1, add);
+    dec = partial1(1, flip(sub));
+
+
+/*----------------------------------------------------------------------------
+ * | Function composition.
+ */
+
+    compose = function (f, g) {
+        return function (x) {
+            return f(g(x));
+        };
+    };
+
+
+
+/*----------------------------------------------------------------------------
  * | EXPORTS
  */
 
     Fp = Object.create(null);
 
+    Fp.add = add;
+    Fp.compose = compose;
+    Fp.div = div;
     Fp.environment = environment;
     Fp.extend = extend;
+    Fp.flip = flip;
+    Fp.inc = inc;
     Fp.isDefined = isDefined;
     Fp.isNotDefined = isNotDefined;
-    Fp.mkData = mkData;
     Fp.mkType = mkType;
+    Fp.mul = mul;
+    Fp.partial1 = partial1;
+    Fp.sub = sub;
+    Fp.uncurry = uncurry;
     Fp.undef = undef;
 
     UNIVERSE.Fp = Fp;
