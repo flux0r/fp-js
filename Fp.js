@@ -6,36 +6,36 @@
 
 /*--------------------------------------------------------------------------*/
     var
-        Fp,
 
-        List,
+    /* Exported */
+
+        Fp,
 
         add,
         compose,
         curry,
         dec,
         div,
-        drop,
-        dropWhile,
-        e,
         environment,
         extend,
+        fib,
         flip,
-        head,
+        getTrue,
+        getFalse,
+        id,
         inc,
-        init,
         isDefined,
-        isNil,
         isNotDefined,
+        isSorted,
+        kFunc,
         mkType,
         mul,
         partial1,
-        setHead,
         sub,
-        sum,
-        tail,
         uncurry,
         undef,
+
+    /* Not exported */
 
         matchDatas,
         matchTypes,
@@ -50,6 +50,98 @@
 
 
 /*----------------------------------------------------------------------------
+ * | The identity function.
+ */
+
+    id = function (x) { return x; };
+
+
+/*----------------------------------------------------------------------------
+ * | The constant function.
+ */
+
+    kFunc = function (x, y) { return x; };
+
+
+/*----------------------------------------------------------------------------
+ * | Chapter 2 exercise 6
+ *
+ * Function composition.
+ */
+
+    compose = function (f, g) {
+        return function (x) {
+            return f(g(x));
+        };
+    };
+
+
+/*----------------------------------------------------------------------------
+ * | Flip the arguments of a binary function.
+ */
+
+    flip = function (f) {
+        return function (x, y) {
+            return f(y, x);
+        };
+    };
+
+
+/*----------------------------------------------------------------------------
+ * | Make arithmetic operators into functions.
+ */
+
+    add = function (x, y) { return x + y; };
+    sub = function (x, y) { return x - y; };
+    mul = function (x, y) { return x * y; };
+    div = function (x, y) { return x / y; };
+
+
+/*----------------------------------------------------------------------------
+ * | Chapter 2 exercise 3
+ *
+ * Partially apply a binary function.
+ */
+
+    partial1 = function (x, f) {
+        return function (y) {
+            return f(x, y);
+        };
+    };
+
+
+/*----------------------------------------------------------------------------
+ * | Chapter 2 exercises 4 and 5
+ *
+ * Make a function of two arguments into a function of one argument that
+ * returns a function of one argument. Also make a way to undo curry.
+ */
+
+    curry = function (f) {
+        return function (x) {
+            return partial1(x, f);
+        };
+    };
+
+    uncurry = function (f) {
+        return function (x, y) {
+            return f(x)(y);
+        };
+    };
+
+
+/*----------------------------------------------------------------------------
+ * | Chapter 2 exercise 3
+ *
+ * Integer increment and decrement. These are examples of using a
+ * partially-applied function.
+ */
+
+    inc = partial1(1, add);
+    dec = partial1(1, flip(sub));
+
+
+/*----------------------------------------------------------------------------
  * | Get the undefined primitive.
  *
  * > undef
@@ -57,6 +149,15 @@
  */
 
     undef = void(0);
+
+
+/*----------------------------------------------------------------------------
+ * | Functions that always return Booleans. These are useful for passing to
+ * pattern match functions.
+ */
+
+    getTrue = function () { return true; };
+    getFalse = function () { return false; };
 
 
 /*----------------------------------------------------------------------------
@@ -86,6 +187,52 @@
 
     isNotDefined = function (x) {
         return x === undef;
+    };
+
+
+/*----------------------------------------------------------------------------
+ * | Chapter 2 exercise 1
+ *
+ * Write a function to get the nth Fibonacci number.
+ *
+ *     > fib(784)
+ *     3.1392431394769516e+163
+ */
+
+    fib = function (n) {
+        var iter;
+        iter = function (a, b, counter) {
+            if (counter === 0) {
+                return b;
+            }
+            return iter(a + b, a, dec(counter));
+        };
+        return iter(1, 0, n);
+    };
+
+
+/*----------------------------------------------------------------------------
+ * | Chapter 2 exercise 2
+ *
+ * Write isSorted, which checks whether an Array is sorted according to a
+ * given comparison function.
+ */
+
+    isSorted = function (xs, p) {
+        var iter;
+        iter = function (xs, res) {
+            if (xs.length === 0) {
+                return true;
+            }
+            if (p(xs[0], res)) {
+                return iter(xs.slice(1), xs[0]);
+            }
+            return false;
+        };
+        if (xs.length < 2) {
+            return true;
+        }
+        return iter(xs.slice(1), xs[0]);
     };
 
 
@@ -147,7 +294,6 @@
         throw new Error("match: The parameter matches no " +
             " constructors in this environment.");
     };
-
 
 
 /*----------------------------------------------------------------------------
@@ -226,14 +372,6 @@
                 args.push(this[accessors[i]](x));
             }
             return o[matchedConstructor].apply(this, args);
-        };
-
-        this.getDs = function () {
-            return ds;
-        };
-
-        this.getTs = function () {
-            return ts;
         };
 
         this.type = function (t) {
@@ -430,160 +568,6 @@
     };
 
 
-/*----------------------------------------------------------------------------
- * | Flip the arguments of a binary function.
- */
-
-    flip = function (f) {
-        return function (x, y) {
-            return f(y, x);
-        };
-    };
-
-
-/*----------------------------------------------------------------------------
- * | Make arithmetic operators functions.
- */
-
-    add = function (x, y) { return x + y; };
-    sub = function (x, y) { return x - y; };
-    mul = function (x, y) { return x * y; };
-    div = function (x, y) { return x / y; };
-
-
-/*----------------------------------------------------------------------------
- * | Partially apply a binary function.
- */
-
-    partial1 = function (x, f) {
-        return function (y) {
-            return f(x, y);
-        };
-    };
-
-
-/*----------------------------------------------------------------------------
- * | Make a function of two arguments into a function of one argument that
- * returns a function of one argument. Also make a way to undo curry.
- */
-
-    curry = function (f) {
-        return function (x) {
-            return partial1(x, f);
-        };
-    };
-
-    uncurry = function (f) {
-        return function (x, y) {
-            return f(x)(y);
-        };
-    };
-
-
-/*----------------------------------------------------------------------------
- * | Integer increment and decrement.
- */
-
-    inc = partial1(1, add);
-    dec = partial1(1, flip(sub));
-
-
-/*----------------------------------------------------------------------------
- * | Function composition.
- */
-
-    compose = function (f, g) {
-        return function (x) {
-            return f(g(x));
-        };
-    };
-
-
-/*----------------------------------------------------------------------------
- * | List data type and functions.
- */
-
-    List = mkType("List", {
-        Nil: [],
-        Cons: ["car", "cdr"]
-    });
-    e = environment().type(List);
-
-    isNil = function (xs) {
-        return e.match(xs, {
-            Nil: function () { return true; },
-            Cons: function () { return false; }
-        });
-    };
-
-    head = function (xs) {
-        return e.match(xs, {
-            Nil: function () {
-                throw new Error("head: Called head on an " + "empty List.");
-            },
-            Cons: function (x, xs) {
-                return x;
-            }
-        });
-    };
-
-    tail = function (xs) {
-        return e.match(xs, {
-            Nil: function () {
-                return e.Nil();
-            },
-            Cons: function (x, xs) {
-                return xs;
-            }
-        });
-    };
-
-    drop = function (xs, n) {
-        if (n <= 0) {
-            return xs;
-        }
-        return drop(tail(xs), dec(n));
-    };
-
-    dropWhile = function (p, xs) {
-        return e.match(xs, {
-            Nil: function () { return e.Nil(); },
-            Cons: function (_x, _xs) {
-                if (p(_x)) {
-                    return dropWhile(p, _xs);
-                }
-                return xs;
-            }
-        });
-    };
-
-    setHead = function (x, xs) {
-        return e.match(xs, {
-            Nil: function () { return e.Cons(x, xs); },
-            Cons: function (_x, _xs) { return e.Cons(x, _xs); }
-        });
-    };
-
-    init = function (xs) {
-        return e.match(xs, {
-            Nil: function () { return e.Nil(); },
-            Cons: function (_x, _xs) {
-                if (isNil(_xs)) {
-                    return e.Nil();
-                }
-                return e.Cons(_x, init(_xs));
-            }
-        });
-    };
-
-    sum = function (xs) {
-        return e.match(xs, {
-            Nil: function () { return 0; },
-            Cons: function (x, xs) {
-                return x + sum(xs);
-            }
-        });
-    };
 
 
 /*----------------------------------------------------------------------------
@@ -594,26 +578,25 @@
 
     Fp.add = add;
     Fp.compose = compose;
+    Fp.curry = curry;
+    Fp.dec = dec;
     Fp.div = div;
-    Fp.drop = drop;
-    Fp.dropWhile = dropWhile;
-    Fp.e = e;
     Fp.environment = environment;
     Fp.extend = extend;
+    Fp.fib = fib;
     Fp.flip = flip;
-    Fp.head = head;
+    Fp.getFalse = getFalse;
+    Fp.getTrue = getTrue;
+    Fp.id = id;
     Fp.inc = inc;
-    Fp.init = init;
     Fp.isDefined = isDefined;
-    Fp.isNil = isNil;
     Fp.isNotDefined = isNotDefined;
+    Fp.isSorted = isSorted;
+    Fp.kFunc = kFunc;
     Fp.mkType = mkType;
     Fp.mul = mul;
     Fp.partial1 = partial1;
-    Fp.setHead = setHead;
     Fp.sub = sub;
-    Fp.sum = sum;
-    Fp.tail = tail;
     Fp.uncurry = uncurry;
     Fp.undef = undef;
 
