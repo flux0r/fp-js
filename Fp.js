@@ -15,17 +15,24 @@
         curry,
         dec,
         div,
+        drop,
+        dropWhile,
+        e,
         environment,
         extend,
         flip,
         head,
         inc,
+        init,
         isDefined,
+        isNil,
         isNotDefined,
         mkType,
         mul,
         partial1,
+        setHead,
         sub,
+        sum,
         tail,
         uncurry,
         undef,
@@ -435,7 +442,7 @@
 
 
 /*----------------------------------------------------------------------------
- * | Make arithmentic operators functions.
+ * | Make arithmetic operators functions.
  */
 
     add = function (x, y) { return x + y; };
@@ -492,6 +499,92 @@
     };
 
 
+/*----------------------------------------------------------------------------
+ * | List data type and functions.
+ */
+
+    List = mkType("List", {
+        Nil: [],
+        Cons: ["car", "cdr"]
+    });
+    e = environment().type(List);
+
+    isNil = function (xs) {
+        return e.match(xs, {
+            Nil: function () { return true; },
+            Cons: function () { return false; }
+        });
+    };
+
+    head = function (xs) {
+        return e.match(xs, {
+            Nil: function () {
+                throw new Error("head: Called head on an " + "empty List.");
+            },
+            Cons: function (x, xs) {
+                return x;
+            }
+        });
+    };
+
+    tail = function (xs) {
+        return e.match(xs, {
+            Nil: function () {
+                return e.Nil();
+            },
+            Cons: function (x, xs) {
+                return xs;
+            }
+        });
+    };
+
+    drop = function (xs, n) {
+        if (n <= 0) {
+            return xs;
+        }
+        return drop(tail(xs), dec(n));
+    };
+
+    dropWhile = function (p, xs) {
+        return e.match(xs, {
+            Nil: function () { return e.Nil(); },
+            Cons: function (_x, _xs) {
+                if (p(_x)) {
+                    return dropWhile(p, _xs);
+                }
+                return xs;
+            }
+        });
+    };
+
+    setHead = function (x, xs) {
+        return e.match(xs, {
+            Nil: function () { return e.Cons(x, xs); },
+            Cons: function (_x, _xs) { return e.Cons(x, _xs); }
+        });
+    };
+
+    init = function (xs) {
+        return e.match(xs, {
+            Nil: function () { return e.Nil(); },
+            Cons: function (_x, _xs) {
+                if (isNil(_xs)) {
+                    return e.Nil();
+                }
+                return e.Cons(_x, init(_xs));
+            }
+        });
+    };
+
+    sum = function (xs) {
+        return e.match(xs, {
+            Nil: function () { return 0; },
+            Cons: function (x, xs) {
+                return x + sum(xs);
+            }
+        });
+    };
+
 
 /*----------------------------------------------------------------------------
  * | EXPORTS
@@ -502,16 +595,25 @@
     Fp.add = add;
     Fp.compose = compose;
     Fp.div = div;
+    Fp.drop = drop;
+    Fp.dropWhile = dropWhile;
+    Fp.e = e;
     Fp.environment = environment;
     Fp.extend = extend;
     Fp.flip = flip;
+    Fp.head = head;
     Fp.inc = inc;
+    Fp.init = init;
     Fp.isDefined = isDefined;
+    Fp.isNil = isNil;
     Fp.isNotDefined = isNotDefined;
     Fp.mkType = mkType;
     Fp.mul = mul;
     Fp.partial1 = partial1;
+    Fp.setHead = setHead;
     Fp.sub = sub;
+    Fp.sum = sum;
+    Fp.tail = tail;
     Fp.uncurry = uncurry;
     Fp.undef = undef;
 
